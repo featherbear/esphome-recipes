@@ -1,0 +1,57 @@
+  esphome:
+    name: workroom-lights
+  
+  esp8266:
+    board: esp8285
+
+  # Enable logging
+  logger:
+
+  # Enable Home Assistant API
+  api:
+
+  ota:
+    platform: esphome
+    password: "6d81cab1fd296348788a84422e9f7b3c"
+
+  wifi:
+    ssid: !secret wifi_ssid
+    password: !secret wifi_password
+
+    # Enable fallback hotspot (captive portal) in case wifi connection fails
+    ap:
+      ssid: "Workroom Lights Fallback"
+      password: !secret wifi_fallback_password
+
+  captive_portal:
+
+  light:
+    # LED Bar
+    - platform: binary
+      name: "Output G"
+      output: output_component1
+      
+    # CW LED Strip
+    - platform: monochromatic
+      name: "Output R"
+      output: output_component2
+      effects:
+        - pulse:
+
+    # Workbench    
+    - platform: monochromatic
+      name: "Output B"
+      output: output_component3
+      effects:
+        - pulse:
+
+  output:
+    - id: output_component1
+      platform: gpio
+      pin: GPIO12
+    - id: output_component2
+      platform: esp8266_pwm
+      pin: GPIO5
+    - id: output_component3
+      platform: esp8266_pwm
+      pin: GPIO13
