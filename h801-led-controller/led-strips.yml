@@ -18,7 +18,7 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
-    ssid: "H801-led-strips Fallback"
+    ssid: "H801-carport-strips Fallback"
     password: !secret wifi_fallback_password
 
 captive_portal:
@@ -27,50 +27,68 @@ output:
   - platform: esp8266_pwm
     pin: 12
     frequency: 1000 Hz
-    id: pwm_b
+    id: output_b
   - platform: esp8266_pwm
     pin: 13
     frequency: 1000 Hz
-    id: pwm_g
+    id: output_g
   - platform: esp8266_pwm
     pin: 15
     frequency: 1000 Hz
-    id: pwm_r
+    id: output_r
   - platform: esp8266_pwm
     pin: 14
     frequency: 1000 Hz
-    id: pwm_w1
+    id: output_w1
   - platform: esp8266_pwm
     pin: 4
     frequency: 1000 Hz
-    id: pwm_w2
+    id: output_w2
 
 light:
   - platform: monochromatic
+    id: light1
     name: "Output B"
-    output: pwm_b
+    output: output_b
     effects:
       - pulse:
   - platform: monochromatic
+    id: light2
     name: "Output G"
-    output: pwm_g
+    output: output_g
     effects:
       - pulse:
   - platform: monochromatic
+    id: light3
     name: "Output R"
-    output: pwm_r
+    output: output_r
     effects:
       - pulse:
   - platform: monochromatic
+    id: light4
     name: "Output W1"
-    output: pwm_w1
+    output: output_w1
     effects:
       - pulse:
   - platform: monochromatic
+    id: light5
     name: "Output W2"
-    output: pwm_w2
+    output: output_w2
     effects:
       - pulse:
+  - platform: partition
+    name: "Group"
+    segments:
+      - single_light_id: light1
+      - single_light_id: light2
+      - single_light_id: light3
+      # W1 is disconnected
+      # - single_light_id: light4 
+      - single_light_id: light5
+    effects:
+      - pulse:
+      - addressable_scan:
+
 
 status_led:
   pin: 5
