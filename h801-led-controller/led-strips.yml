@@ -1,28 +1,30 @@
+substitutions:
+  step_delay: 250ms
+  wave_step: 200ms
+  wave_fade: 800ms
+  wave_hold: 600ms
+  wave_trough: "0.05"
+  pulse_fade: 1s
+  pulse_max:  "1.00"
+  pulse_min:  "0.20"
+  scan_step:  250ms
+  scan_level: "1.00"
 esphome:
   name: led-strips
-
 esp8266:
   board: esp01_1m
-
-# Enable logging
 logger:
-
-# Enable Home Assistant API
 api:
-
 ota:
   platform: esphome
   password: !secret ota_password
-
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
-    ssid: "H801-carport-strips Fallback"
+    ssid: "H801-led-strips Fallback"
     password: !secret wifi_fallback_password
-
 captive_portal:
-    
 output:
   - platform: esp8266_pwm
     pin: 12
@@ -44,7 +46,6 @@ output:
     pin: 4
     frequency: 1000 Hz
     id: output_w2
-
 light:
   - platform: monochromatic
     id: light1
@@ -78,17 +79,245 @@ light:
       - pulse:
   - platform: partition
     name: "Group"
+    id: group_light
     segments:
       - single_light_id: light1
       - single_light_id: light2
       - single_light_id: light3
       # W1 is disconnected
-      # - single_light_id: light4 
+      # - single_light_id: light4
       - single_light_id: light5
     effects:
-      - pulse:
-      - addressable_scan:
-
-
+      - automation:
+          name: Pulse
+          sequence:
+            - while:
+                condition: { lambda: 'return true;' }
+                then:
+                  - light.turn_on:
+                      id: light1
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_max;'
+                      transition_length: $pulse_fade
+                  - light.turn_on:
+                      id: light2
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_max;'
+                      transition_length: $pulse_fade
+                  - light.turn_on:
+                      id: light3
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_max;'
+                      transition_length: $pulse_fade
+                  - light.turn_on:
+                      id: light5
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_max;'
+                      transition_length: $pulse_fade
+                  - delay: $pulse_fade
+                  - light.turn_on:
+                      id: light1
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_min;'
+                      transition_length: $pulse_fade
+                  - light.turn_on:
+                      id: light2
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_min;'
+                      transition_length: $pulse_fade
+                  - light.turn_on:
+                      id: light3
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_min;'
+                      transition_length: $pulse_fade
+                  - light.turn_on:
+                      id: light5
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_min;'
+                      transition_length: $pulse_fade
+                  - delay: $pulse_fade
+      - automation:
+          name: Scan
+          sequence:
+            - while:
+                condition: { lambda: 'return true;' }
+                then:
+                  - light.turn_on:
+                      id: light1
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $scan_level;'
+                      transition_length: 0s
+                  - light.turn_off: { id: light2, transition_length: 0s }
+                  - light.turn_off: { id: light3, transition_length: 0s }
+                  - light.turn_off: { id: light5, transition_length: 0s }
+                  - delay: $scan_step
+                  - light.turn_off: { id: light1, transition_length: 0s }
+                  - light.turn_on:
+                      id: light2
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $scan_level;'
+                      transition_length: 0s
+                  - delay: $scan_step
+                  - light.turn_off: { id: light2, transition_length: 0s }
+                  - light.turn_on:
+                      id: light3
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $scan_level;'
+                      transition_length: 0s
+                  - delay: $scan_step
+                  - light.turn_off: { id: light3, transition_length: 0s }
+                  - light.turn_on:
+                      id: light5
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $scan_level;'
+                      transition_length: 0s
+                  - delay: $scan_step
+      - automation:
+          name: Wave
+          sequence:
+            - while:
+                condition: { lambda: 'return true;' }
+                then:
+                  - light.turn_on:
+                      id: light1
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light2
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light3
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light5
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+                      transition_length: $wave_fade
+                  - delay: $wave_hold
+                  - light.turn_on:
+                      id: light1
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light2
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light3
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light5
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
+                      transition_length: $wave_fade
+                  - delay: $wave_hold
+      - automation:
+          name: Wave Reverse
+          sequence:
+            - while:
+                condition: { lambda: 'return true;' }
+                then:
+                  - light.turn_on:
+                      id: light5
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light3
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light2
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light1
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+                      transition_length: $wave_fade
+                  - delay: $wave_hold
+                  - light.turn_on:
+                      id: light5
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light3
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light2
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
+                      transition_length: $wave_fade
+                  - delay: $wave_step
+                  - light.turn_on:
+                      id: light1
+                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
+                      transition_length: $wave_fade
+                  - delay: $wave_hold
+button:
+  - platform: template
+    name: "Group Step On"
+    on_press:
+      - light.turn_off: { id: light1 }
+      - light.turn_off: { id: light2 }
+      - light.turn_off: { id: light3 }
+      - light.turn_off: { id: light5 }
+      - light.turn_on:
+          id: light1
+          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+      - delay: $step_delay
+      - light.turn_on:
+          id: light2
+          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+      - delay: $step_delay
+      - light.turn_on:
+          id: light3
+          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+      - delay: $step_delay
+      - light.turn_on:
+          id: light5
+          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+  - platform: template
+    name: "Group Step On Reverse"
+    on_press:
+      - light.turn_off: { id: light1 }
+      - light.turn_off: { id: light2 }
+      - light.turn_off: { id: light3 }
+      - light.turn_off: { id: light5 }
+      - light.turn_on:
+          id: light5
+          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+      - delay: $step_delay
+      - light.turn_on:
+          id: light3
+          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+      - delay: $step_delay
+      - light.turn_on:
+          id: light2
+          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+      - delay: $step_delay
+      - light.turn_on:
+          id: light1
+          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+  - platform: template
+    name: "Group Step Off"
+    on_press:
+      - light.turn_off: { id: light5 }
+      - delay: $step_delay
+      - light.turn_off: { id: light3 }
+      - delay: $step_delay
+      - light.turn_off: { id: light2 }
+      - delay: $step_delay
+      - light.turn_off: { id: light1 }
+      - light.turn_off: { id: group_light }
+  - platform: template
+    name: "Group Step Off Reverse"
+    on_press:
+      - light.turn_off: { id: light1 }
+      - delay: $step_delay
+      - light.turn_off: { id: light2 }
+      - delay: $step_delay
+      - light.turn_off: { id: light3 }
+      - delay: $step_delay
+      - light.turn_off: { id: light5 }
+      - light.turn_off: { id: group_light }
 status_led:
   pin: 5
