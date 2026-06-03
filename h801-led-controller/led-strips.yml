@@ -87,6 +87,27 @@ light:
       # W1 is disconnected
       # - single_light_id: light4
       - single_light_id: light5
+    on_state:
+      - if:
+          condition:
+            lambda: 'return id(group_light).get_effect_name() == "None";'
+          then:
+            - light.control:
+                id: light1
+                state: !lambda 'return id(group_light).remote_values.is_on();'
+                brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+            - light.control:
+                id: light2
+                state: !lambda 'return id(group_light).remote_values.is_on();'
+                brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+            - light.control:
+                id: light3
+                state: !lambda 'return id(group_light).remote_values.is_on();'
+                brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
+            - light.control:
+                id: light5
+                state: !lambda 'return id(group_light).remote_values.is_on();'
+                brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
     effects:
       - automation:
           name: Pulse
@@ -300,24 +321,24 @@ button:
   - platform: template
     name: "Group Step Off"
     on_press:
-      - light.turn_off: { id: light5 }
-      - delay: $step_delay
-      - light.turn_off: { id: light3 }
+      - light.turn_off: { id: light1 }
       - delay: $step_delay
       - light.turn_off: { id: light2 }
       - delay: $step_delay
-      - light.turn_off: { id: light1 }
+      - light.turn_off: { id: light3 }
+      - delay: $step_delay
+      - light.turn_off: { id: light5 }
       - light.turn_off: { id: group_light }
   - platform: template
     name: "Group Step Off Reverse"
     on_press:
-      - light.turn_off: { id: light1 }
-      - delay: $step_delay
-      - light.turn_off: { id: light2 }
+      - light.turn_off: { id: light5 }
       - delay: $step_delay
       - light.turn_off: { id: light3 }
       - delay: $step_delay
-      - light.turn_off: { id: light5 }
+      - light.turn_off: { id: light2 }
+      - delay: $step_delay
+      - light.turn_off: { id: light1 }
       - light.turn_off: { id: group_light }
 status_led:
   pin: 5
