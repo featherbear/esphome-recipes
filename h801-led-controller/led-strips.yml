@@ -1,14 +1,12 @@
 substitutions:
-  step_delay: 400ms
-  wave_step: 200ms
-  wave_fade: 800ms
-  wave_hold: 600ms
-  wave_trough: "0.05"
-  pulse_fade: 1s
+  step_delay_ms: "400"
+  min_visible: "0.07"   # lowest PWM duty cycle the LEDs visibly light at
+  wave_trough: "0.07"
+  pulse_min:  "0.07"
   pulse_max:  "1.00"
-  pulse_min:  "0.20"
-  scan_step:  250ms
-  scan_level: "1.00"
+  pulse_period_ms: "2000"
+  wave_period_ms:  "3000"
+  scan_period_ms:  "1000"
 esphome:
   name: led-strips
 esp8266:
@@ -29,69 +27,46 @@ output:
   - platform: esp8266_pwm
     pin: 12
     frequency: 1000 Hz
-    min_power: 0.1
-    zero_means_zero: true
     id: output_b
   - platform: esp8266_pwm
     pin: 13
     frequency: 1000 Hz
-    min_power: 0.1
-    zero_means_zero: true
     id: output_g
   - platform: esp8266_pwm
     pin: 15
     frequency: 1000 Hz
-    min_power: 0.1
-    zero_means_zero: true
     id: output_r
   - platform: esp8266_pwm
     pin: 14
     frequency: 1000 Hz
-    min_power: 0.1
-    zero_means_zero: true
     id: output_w1
   - platform: esp8266_pwm
     pin: 4
     frequency: 1000 Hz
-    min_power: 0.1
-    zero_means_zero: true
     id: output_w2
 light:
   - platform: monochromatic
     id: light1
-    name: "Output B"
     output: output_b
-    gamma_correct: 2.8
-    effects:
-      - pulse:
+    internal: true
   - platform: monochromatic
     id: light2
-    name: "Output G"
     output: output_g
-    gamma_correct: 2.8
-    effects:
-      - pulse:
+    internal: true
   - platform: monochromatic
     id: light3
-    name: "Output R"
     output: output_r
-    gamma_correct: 2.8
-    effects:
-      - pulse:
+    internal: true
   - platform: monochromatic
     id: light4
     name: "Output W1"
     output: output_w1
-    gamma_correct: 2.8
     effects:
       - pulse:
   - platform: monochromatic
     id: light5
-    name: "Output W2"
     output: output_w2
-    gamma_correct: 2.8
-    effects:
-      - pulse:
+    internal: true
   - platform: partition
     name: "Group"
     id: group_light
@@ -99,261 +74,263 @@ light:
       - single_light_id: light1
       - single_light_id: light2
       - single_light_id: light3
-      # W1 is disconnected
+      # W1 is disconnected from the group
       # - single_light_id: light4
       - single_light_id: light5
-    on_state:
-      - if:
-          condition:
-            lambda: 'return id(group_light).get_effect_name() == "None";'
-          then:
-            - light.control:
-                id: light1
-                state: !lambda 'return id(group_light).remote_values.is_on();'
-                brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-            - light.control:
-                id: light2
-                state: !lambda 'return id(group_light).remote_values.is_on();'
-                brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-            - light.control:
-                id: light3
-                state: !lambda 'return id(group_light).remote_values.is_on();'
-                brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-            - light.control:
-                id: light5
-                state: !lambda 'return id(group_light).remote_values.is_on();'
-                brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
     effects:
-      - automation:
+      - addressable_lambda:
           name: Pulse
-          sequence:
-            - while:
-                condition: { lambda: 'return true;' }
-                then:
-                  - light.turn_on:
-                      id: light1
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_max;'
-                      transition_length: $pulse_fade
-                  - light.turn_on:
-                      id: light2
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_max;'
-                      transition_length: $pulse_fade
-                  - light.turn_on:
-                      id: light3
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_max;'
-                      transition_length: $pulse_fade
-                  - light.turn_on:
-                      id: light5
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_max;'
-                      transition_length: $pulse_fade
-                  - delay: $pulse_fade
-                  - light.turn_on:
-                      id: light1
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_min;'
-                      transition_length: $pulse_fade
-                  - light.turn_on:
-                      id: light2
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_min;'
-                      transition_length: $pulse_fade
-                  - light.turn_on:
-                      id: light3
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_min;'
-                      transition_length: $pulse_fade
-                  - light.turn_on:
-                      id: light5
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $pulse_min;'
-                      transition_length: $pulse_fade
-                  - delay: $pulse_fade
-      - automation:
-          name: Scan
-          sequence:
-            - while:
-                condition: { lambda: 'return true;' }
-                then:
-                  - light.turn_on:
-                      id: light1
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $scan_level;'
-                      transition_length: 0s
-                  - light.turn_off: { id: light2, transition_length: 0s }
-                  - light.turn_off: { id: light3, transition_length: 0s }
-                  - light.turn_off: { id: light5, transition_length: 0s }
-                  - delay: $scan_step
-                  - light.turn_off: { id: light1, transition_length: 0s }
-                  - light.turn_on:
-                      id: light2
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $scan_level;'
-                      transition_length: 0s
-                  - delay: $scan_step
-                  - light.turn_off: { id: light2, transition_length: 0s }
-                  - light.turn_on:
-                      id: light3
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $scan_level;'
-                      transition_length: 0s
-                  - delay: $scan_step
-                  - light.turn_off: { id: light3, transition_length: 0s }
-                  - light.turn_on:
-                      id: light5
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $scan_level;'
-                      transition_length: 0s
-                  - delay: $scan_step
-      - automation:
+          update_interval: 30ms
+          lambda: |-
+            // The partition multiplies pixel values by group brightness when
+            // forwarding to the underlying mono segments. To get a smooth
+            // cosine pulse at any slider position, we remap the cosine into
+            // [effective_min, effective_max] where effective_min is at least
+            // $min_visible / brightness (so the post-scale trough sits at
+            // the visible floor). $pulse_min acts as an additional floor at
+            // high brightness; $pulse_max sets the peak.
+            const float period = $pulse_period_ms;
+            const float min_vis = $min_visible;
+            const float pmin = $pulse_min;
+            const float pmax = $pulse_max;
+            float t = fmodf((float)millis(), period) / period;
+            float wave = (1.0f - cosf(t * 6.2831853f)) * 0.5f;
+            float br = id(group_light).remote_values.get_brightness();
+            float floor_level = (br > 0.0f) ? (min_vis / br) : 1.0f;
+            if (floor_level > 1.0f) floor_level = 1.0f;
+            float eff_min = (pmin > floor_level) ? pmin : floor_level;
+            float eff_max = (pmax > eff_min) ? pmax : eff_min;
+            float level = eff_min + (eff_max - eff_min) * wave;
+            uint8_t v = (uint8_t)roundf(level * 255.0f);
+            for (int i = 0; i < it.size(); i++) it[i] = Color(v, v, v);
+      - addressable_lambda:
           name: Wave
-          sequence:
-            - while:
-                condition: { lambda: 'return true;' }
-                then:
-                  - light.turn_on:
-                      id: light1
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light2
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light3
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light5
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-                      transition_length: $wave_fade
-                  - delay: $wave_hold
-                  - light.turn_on:
-                      id: light1
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light2
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light3
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light5
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
-                      transition_length: $wave_fade
-                  - delay: $wave_hold
-      - automation:
+          update_interval: 30ms
+          lambda: |-
+            const float period = $wave_period_ms;
+            const float min_vis = $min_visible;
+            const float trough = $wave_trough;
+            float br = id(group_light).remote_values.get_brightness();
+            float floor_level = (br > 0.0f) ? (min_vis / br) : 1.0f;
+            if (floor_level > 1.0f) floor_level = 1.0f;
+            float eff_min = (trough > floor_level) ? trough : floor_level;
+            float t = fmodf((float)millis(), period) / period;
+            for (int i = 0; i < it.size(); i++) {
+              float offset = (float)i / (float)it.size();
+              float phase = fmodf(t - offset + 1.0f, 1.0f);
+              float wave = (1.0f - cosf(phase * 6.2831853f)) * 0.5f;
+              float level = eff_min + (1.0f - eff_min) * wave;
+              uint8_t v = (uint8_t)roundf(level * 255.0f);
+              it[i] = Color(v, v, v);
+            }
+      - addressable_lambda:
           name: Wave Reverse
-          sequence:
-            - while:
-                condition: { lambda: 'return true;' }
-                then:
-                  - light.turn_on:
-                      id: light5
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light3
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light2
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light1
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness();'
-                      transition_length: $wave_fade
-                  - delay: $wave_hold
-                  - light.turn_on:
-                      id: light5
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light3
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light2
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
-                      transition_length: $wave_fade
-                  - delay: $wave_step
-                  - light.turn_on:
-                      id: light1
-                      brightness: !lambda 'return id(group_light).remote_values.get_brightness() * $wave_trough;'
-                      transition_length: $wave_fade
-                  - delay: $wave_hold
+          update_interval: 30ms
+          lambda: |-
+            const float period = $wave_period_ms;
+            const float min_vis = $min_visible;
+            const float trough = $wave_trough;
+            float br = id(group_light).remote_values.get_brightness();
+            float floor_level = (br > 0.0f) ? (min_vis / br) : 1.0f;
+            if (floor_level > 1.0f) floor_level = 1.0f;
+            float eff_min = (trough > floor_level) ? trough : floor_level;
+            float t = fmodf((float)millis(), period) / period;
+            for (int i = 0; i < it.size(); i++) {
+              float offset = (float)(it.size() - 1 - i) / (float)it.size();
+              float phase = fmodf(t - offset + 1.0f, 1.0f);
+              float wave = (1.0f - cosf(phase * 6.2831853f)) * 0.5f;
+              float level = eff_min + (1.0f - eff_min) * wave;
+              uint8_t v = (uint8_t)roundf(level * 255.0f);
+              it[i] = Color(v, v, v);
+            }
+      - addressable_lambda:
+          name: Scan
+          update_interval: 30ms
+          lambda: |-
+            // For Scan, off pixels stay truly off (BLACK). The lit pixel is
+            // boosted so its post-scale output is at least $min_visible.
+            const float period = $scan_period_ms;
+            const float min_vis = $min_visible;
+            float br = id(group_light).remote_values.get_brightness();
+            float lit_level = 1.0f;
+            if (br > 0.0f && br < min_vis) lit_level = 1.0f;  // saturated; still dark after scaling
+            float t = fmodf((float)millis(), period) / period;
+            int lit = (int)(t * it.size());
+            uint8_t v = (uint8_t)roundf(lit_level * 255.0f);
+            for (int i = 0; i < it.size(); i++)
+              it[i] = (i == lit) ? Color(v, v, v) : Color::BLACK;
+      - addressable_lambda:
+          name: "Step On"
+          update_interval: 30ms
+          lambda: |-
+            // One-shot staircase ON. Each segment fades from 0 to 1 in
+            // sequence; the partition scales by group brightness on write.
+            // The dead-zone floor is only applied while a segment is mid-fade
+            // (so not-yet-started segments stay truly off).
+            static uint32_t start_time = 0;
+            if (initial_run) start_time = millis();
+            const float step_ms = $step_delay_ms;
+            const float min_vis = $min_visible;
+            float br = id(group_light).remote_values.get_brightness();
+            float floor_level = (br > 0.0f) ? (min_vis / br) : 1.0f;
+            if (floor_level > 1.0f) floor_level = 1.0f;
+            uint32_t elapsed = millis() - start_time;
+            for (int i = 0; i < it.size(); i++) {
+              float seg_start = i * step_ms;
+              float seg_end = seg_start + step_ms;
+              float level;
+              if ((float)elapsed < seg_start) {
+                level = 0.0f;
+              } else if ((float)elapsed >= seg_end) {
+                level = 1.0f;
+              } else {
+                float frac = ((float)elapsed - seg_start) / step_ms;
+                level = floor_level + (1.0f - floor_level) * frac;
+              }
+              uint8_t v = (uint8_t)roundf(level * 255.0f);
+              it[i] = Color(v, v, v);
+            }
+      - addressable_lambda:
+          name: "Step On Reverse"
+          update_interval: 30ms
+          lambda: |-
+            static uint32_t start_time = 0;
+            if (initial_run) start_time = millis();
+            const float step_ms = $step_delay_ms;
+            const float min_vis = $min_visible;
+            float br = id(group_light).remote_values.get_brightness();
+            float floor_level = (br > 0.0f) ? (min_vis / br) : 1.0f;
+            if (floor_level > 1.0f) floor_level = 1.0f;
+            uint32_t elapsed = millis() - start_time;
+            for (int i = 0; i < it.size(); i++) {
+              int rank = it.size() - 1 - i;
+              float seg_start = rank * step_ms;
+              float seg_end = seg_start + step_ms;
+              float level;
+              if ((float)elapsed < seg_start) {
+                level = 0.0f;
+              } else if ((float)elapsed >= seg_end) {
+                level = 1.0f;
+              } else {
+                float frac = ((float)elapsed - seg_start) / step_ms;
+                level = floor_level + (1.0f - floor_level) * frac;
+              }
+              uint8_t v = (uint8_t)roundf(level * 255.0f);
+              it[i] = Color(v, v, v);
+            }
+      - addressable_lambda:
+          name: "Step Off"
+          update_interval: 30ms
+          lambda: |-
+            // One-shot staircase OFF. Each segment fades from 1 to 0 in
+            // sequence; segments not yet faded stay at 1 (full group bright).
+            static uint32_t start_time = 0;
+            if (initial_run) start_time = millis();
+            const float step_ms = $step_delay_ms;
+            const float min_vis = $min_visible;
+            float br = id(group_light).remote_values.get_brightness();
+            float floor_level = (br > 0.0f) ? (min_vis / br) : 1.0f;
+            if (floor_level > 1.0f) floor_level = 1.0f;
+            uint32_t elapsed = millis() - start_time;
+            for (int i = 0; i < it.size(); i++) {
+              float seg_start = i * step_ms;
+              float seg_end = seg_start + step_ms;
+              float level;
+              if ((float)elapsed < seg_start) {
+                level = 1.0f;
+              } else if ((float)elapsed >= seg_end) {
+                level = 0.0f;
+              } else {
+                float frac = ((float)elapsed - seg_start) / step_ms;
+                level = floor_level + (1.0f - floor_level) * (1.0f - frac);
+              }
+              uint8_t v = (uint8_t)roundf(level * 255.0f);
+              it[i] = Color(v, v, v);
+            }
+      - addressable_lambda:
+          name: "Step Off Reverse"
+          update_interval: 30ms
+          lambda: |-
+            static uint32_t start_time = 0;
+            if (initial_run) start_time = millis();
+            const float step_ms = $step_delay_ms;
+            const float min_vis = $min_visible;
+            float br = id(group_light).remote_values.get_brightness();
+            float floor_level = (br > 0.0f) ? (min_vis / br) : 1.0f;
+            if (floor_level > 1.0f) floor_level = 1.0f;
+            uint32_t elapsed = millis() - start_time;
+            for (int i = 0; i < it.size(); i++) {
+              int rank = it.size() - 1 - i;
+              float seg_start = rank * step_ms;
+              float seg_end = seg_start + step_ms;
+              float level;
+              if ((float)elapsed < seg_start) {
+                level = 1.0f;
+              } else if ((float)elapsed >= seg_end) {
+                level = 0.0f;
+              } else {
+                float frac = ((float)elapsed - seg_start) / step_ms;
+                level = floor_level + (1.0f - floor_level) * (1.0f - frac);
+              }
+              uint8_t v = (uint8_t)roundf(level * 255.0f);
+              it[i] = Color(v, v, v);
+            }
 button:
   - platform: template
     name: "Group Step On"
     on_press:
-      - light.turn_off: { id: light1 }
-      - light.turn_off: { id: light2 }
-      - light.turn_off: { id: light3 }
-      - light.turn_off: { id: light5 }
+      # Ensure brightness is at least the visibility floor so the effect is
+      # actually visible, then trigger the one-shot Step On effect. The effect
+      # animates segment pixels via the partition (so the partition remains
+      # the sole owner of segment outputs). After the staircase duration,
+      # clear the effect and the Group is back in normal state.
       - light.turn_on:
-          id: light1
-          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
-      - delay: $step_delay
+          id: group_light
+          brightness: !lambda |-
+            float b = id(group_light).remote_values.get_brightness();
+            return std::max(b, 0.1f);
+          effect: "Step On"
+      - delay: !lambda |-
+          // 4 segments * step_delay + small settle margin
+          return (uint32_t)(4 * $step_delay_ms + 100);
       - light.turn_on:
-          id: light2
-          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
-      - delay: $step_delay
-      - light.turn_on:
-          id: light3
-          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
-      - delay: $step_delay
-      - light.turn_on:
-          id: light5
-          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+          id: group_light
+          effect: "None"
   - platform: template
     name: "Group Step On Reverse"
     on_press:
-      - light.turn_off: { id: light1 }
-      - light.turn_off: { id: light2 }
-      - light.turn_off: { id: light3 }
-      - light.turn_off: { id: light5 }
       - light.turn_on:
-          id: light5
-          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
-      - delay: $step_delay
+          id: group_light
+          brightness: !lambda |-
+            float b = id(group_light).remote_values.get_brightness();
+            return std::max(b, 0.1f);
+          effect: "Step On Reverse"
+      - delay: !lambda |-
+          return (uint32_t)(4 * $step_delay_ms + 100);
       - light.turn_on:
-          id: light3
-          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
-      - delay: $step_delay
-      - light.turn_on:
-          id: light2
-          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
-      - delay: $step_delay
-      - light.turn_on:
-          id: light1
-          brightness: !lambda 'return std::max(id(group_light).remote_values.get_brightness(), 0.1f);'
+          id: group_light
+          effect: "None"
   - platform: template
     name: "Group Step Off"
     on_press:
-      - light.turn_off: { id: light1 }
-      - delay: $step_delay
-      - light.turn_off: { id: light2 }
-      - delay: $step_delay
-      - light.turn_off: { id: light3 }
-      - delay: $step_delay
-      - light.turn_off: { id: light5 }
-      - light.turn_off: { id: group_light }
+      # Run the Step Off effect (requires the Group to be on). When done,
+      # turn the Group off so HA state and segment outputs settle to 0.
+      - light.turn_on:
+          id: group_light
+          effect: "Step Off"
+      - delay: !lambda |-
+          return (uint32_t)(4 * $step_delay_ms + 100);
+      - light.turn_off:
+          id: group_light
   - platform: template
     name: "Group Step Off Reverse"
     on_press:
-      - light.turn_off: { id: light5 }
-      - delay: $step_delay
-      - light.turn_off: { id: light3 }
-      - delay: $step_delay
-      - light.turn_off: { id: light2 }
-      - delay: $step_delay
-      - light.turn_off: { id: light1 }
-      - light.turn_off: { id: group_light }
+      - light.turn_on:
+          id: group_light
+          effect: "Step Off Reverse"
+      - delay: !lambda |-
+          return (uint32_t)(4 * $step_delay_ms + 100);
+      - light.turn_off:
+          id: group_light
 status_led:
   pin: 5
